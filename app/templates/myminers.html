@@ -10,7 +10,7 @@
             font-family: 'Consolas';
             font-size: 14px;
         }
-        
+
         fieldset.top {
             margin: 5px;
             display: inline-block;
@@ -183,9 +183,9 @@
     <table style="width:100%">
         <tr>
             <th>IP Address</th>
-            <th>Worker</th>
+            <th>[Worker] Pool</th>
             <th>Model</th>
-            <th>Remarks</th>
+            <!-- <th>Remarks</th> -->
             <th title="'O' means OK">Chips (Os)</th>
             <th title="'X' means defective">Chips (Xs)</th>
             <th title="'-' means instability of the power supply voltage or the defective hash board">Chips (-)</th>
@@ -195,15 +195,16 @@
             <th>HW Error Rate %</th>
             <th>Uptime</th>
             <th>Status</th>
-            <!--<th>JSON Info</th>-->
+            <th>JSON Info</th>
             <th>Remove</th>
         </tr>
         {%- for active_miner in active_miners|sort(attribute='ip') %}
             <tr{%- if active_miner.ip in miner_errors %} class="error"{%- endif %}>
                 <td><a target="_blank" href="http://{{ active_miner.ip }}">{{ active_miner.ip }}</a></td>
-                <td>{{ workers[active_miner.ip] }}</td>
+                <td>{{ workers[active_miner.ip][0] }}<br />{{ workers[active_miner.ip][1] }}<br />{{ workers[active_miner.ip][2] }}
+                </td>
                 <td title="{{ active_miner.model.description }}">{{ active_miner.model.model }}</td>
-                <td>{{ active_miner.remarks }}</td>
+                <!-- <td>{{ active_miner.remarks }}</td> -->
                 <td>{{ miner_chips[active_miner.ip]['status']['Os'] }}</td>
                 <td>{{ miner_chips[active_miner.ip]['status']['Xs'] }}</td>
                 <td>{{ miner_chips[active_miner.ip]['status']['-'] }}</td>
@@ -214,9 +215,9 @@
                 <td>{{ uptimes[active_miner.ip] }}</td>
                 <td title="{%- if active_miner.ip in miner_errors %}{{ miner_errors[active_miner.ip] }}{%- endif %}">
                     {%- if active_miner.ip in miner_errors %}Check your miner{%- else %}OK{%- endif %}</td>
-                <!--<td><a target="_blank" href="/{{ active_miner.ip }}/summary">Summary</a> |
+                <td><a target="_blank" href="/{{ active_miner.ip }}/summary">Summary</a> |
                     <a target="_blank" href="/{{ active_miner.ip }}/pools">Pools</a> |
-                    <a target="_blank" href="/{{ active_miner.ip }}/stats">Stats</a></td>-->
+                    <a target="_blank" href="/{{ active_miner.ip }}/stats">Stats</a></td>
                 <td><a href={{ url_for('delete_miner', id=active_miner.id) }}><img src="/static/images/assets/remove.png"></img></a></td>
             </tr>
         {%- endfor %}

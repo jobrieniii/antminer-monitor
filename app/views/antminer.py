@@ -50,7 +50,12 @@ def miners():
         else:
             # Get worker name
             miner_pools = get_pools(miner.ip)
-            worker = miner_pools['POOLS'][0]['User']
+            worker = []
+            worker.append('[' + miner_pools['POOLS'][0]['User'] + '] ' + miner_pools['POOLS'][0]['URL'])
+            worker.append('[' + miner_pools['POOLS'][1]['User'] + '] ' + miner_pools['POOLS'][1]['URL'])
+            worker.append('[' + miner_pools['POOLS'][2]['User'] + '] ' + miner_pools['POOLS'][2]['URL'])
+
+
             # Get miner's ASIC chips
             asic_chains = [miner_stats['STATS'][1][chain] for chain in miner_stats['STATS'][1].keys() if
                            "chain_acs" in chain]
