@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Antminer Monitor {{ version }} - Dashboard</title>
+    <style>
+        body {
+            margin: 10 auto;
+            font-family: 'Consolas';
+            font-size: 12px;
+        }
+
+        fieldset.top {
+            margin: 5px;
+            display: inline-block;
+            vertical-align: top;
+        }
+
+        .right {
+            float: right;
+        }
+
+        input[type="text"], textarea {
+            font-family: 'Consolas';
+            font-size: 12px;
+        }
+
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            text-align: center;
+        }
+
+        th, td {
+            padding: 5px;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        form {
+            display: table;
+        }
+
+        p {
+            display: table-row;
+        }
+
+        label {
+            display: table-cell;
+        }
+
+        input {
+            display: table-cell;
+            margin: 5px 0px 5px 0px;
+        }
+
+        .info, .success, .warning, .error {
+            margin: 10px 0px;
+            padding: 12px;
+            border-radius: .5em;
+            # add rounder corners
+            border: 1px solid;
+            # add border
+            box-shadow: 1px 1px 3px #888;
+            # add shadow
+        }
+
+        .info {
+            color: #00529B;
+            background-color: #BDE5F8;
+        }
+
+        .success {
+            color: #4F8A10;
+            background-color: #DFF2BF;
+        }
+
+        .warning {
+            color: #9F6000;
+            background-color: #FEEFB3;
+        }
+
+        .error {
+            color: #D8000C;
+            background-color: #FFBABA;
+        }
+
+    </style>
+
+</head>
+<body>
+
+
+
+
+
+{%- set mapping = {'L3+': 'MH/s', 'S7': 'GH/s', 'S9': 'GH/s', 'D3': 'MH/s'} %}
+{%- with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="{{ category }}">
+                <strong>{{ message }}</strong>
+            </div>
+        {% endfor %}
+    {% endif %}
+{%- endwith %}
+
+{%- if inactive_miners %}
+    <fieldset name="inactive_miner_list">
+        <legend>In-active Miners ({{ inactive_miners|length }})</legend>
+        <table style="width:100%">
+            <tr>
+                <th>IP Address</th>
+                <th>Model</th>
+                <th>Remarks</th>
+                <th>Status</th>
+            </tr>
+            {%- for inactive_miner in inactive_miners|sort(attribute='ip') %}
+                <tr>
+                    <td><a target="_blank" href="http://{{ inactive_miner.ip }}">{{ inactive_miner.ip }}</a></td>
+                    <td>{{ inactive_miner.model.model }}</td>
+                    <td>{{ inactive_miner.remarks }}</td>
+                    <td>Error: Check connection or IP Address</td>
+                </tr>
+            {%- endfor %}
+        </table>
+    </fieldset>
+{%- endif %}
+
+<br>
+
+<fieldset name="active_miner_list">
+    <legend>Active Miners ({{ active_miners|length }})</legend>
+    <table style="width:100%">
+        <tr>
+            <th>IP Address</th>
+            <th>Model</th>
+            <!-- <th>Remarks</th> -->
+            <th title="'O' means OK">Chips (Os)</th>
+            <th title="'X' means defective">Chips (Xs)</th>
+            <th title="'-' means instability of the power supply voltage or the defective hash board">Chips (-)</th>
+            <th>Chip Temp(C)</th>
+            <th>Fan speeds (rpm)</th>
+            <th>Hashrate (5s)</th>
+            <th>HW Error Rate %</th>
+            <th>Uptime</th>
+            <th>Status</th>
+            <!-- <th>JSON Info</th> -->
+        </tr>
+        {%- for active_miner in active_miners|sort(attribute='ip') %}
+            <tr{%- if active_miner.ip in miner_errors %} class="error"{%- endif %}>
+                <td><a target="_blank" href="http://{{ active_miner.ip }}">{{ active_miner.ip }}</a></td>
+                <td title="{{ active_miner.model.description }}">{{ active_miner.model.model }}</td>
+                <!-- <td>{{ active_miner.remarks }}</td> -->
+                <td>{{ miner_chips[active_miner.ip]['status']['Os'] }}</td>
+                <td>{{ miner_chips[active_miner.ip]['status']['Xs'] }}</td>
+                <td>{{ miner_chips[active_miner.ip]['status']['-'] }}</td>
+                <td>{{ temperatures[active_miner.ip] }}</td>
+                <td>{{ fans[active_miner.ip].speeds }}</td>
+                <td>{{ hash_rates[active_miner.ip] }} {{ mapping.get(active_miner.model.model) }}</td>
+                <td>{{ hw_error_rates[active_miner.ip] }}</td>
+                <td>{{ uptimes[active_miner.ip] }}</td>
+                <td title="{%- if active_miner.ip in miner_errors %}{{ miner_errors[active_miner.ip] }}{%- endif %}">
+                    {%- if active_miner.ip in miner_errors %}Check your miner{%- else %}OK{%- endif %}</td>
+                <!-- <td><a target="_blank" href="/{{ active_miner.ip }}/summary">Summary</a> |
+                    <a target="_blank" href="/{{ active_miner.ip }}/pools">Pools</a> |
+                    <a target="_blank" href="/{{ active_miner.ip }}/stats">Stats</a></td> -->
+            </tr>
+        {%- endfor %}
+    </table>
+</fieldset>
+
+<br>
+</i>
+
+</body>
+</html>
