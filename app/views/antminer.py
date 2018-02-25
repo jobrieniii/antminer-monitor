@@ -5,15 +5,14 @@ from flask import (jsonify,
                    url_for,
                    flash,
                    )
-from flask.views import MethodView
-from app.views.antminer_json import (get_summary,
-                                     get_pools,
-                                     get_stats,
-                                     )
+from app.lib.pycgminer import (get_summary,
+                               get_pools,
+                               get_stats,
+                               )
 from sqlalchemy.exc import IntegrityError
-from app.pycgminer import CgminerAPI
 from app import app, db, logger, __version__
 from app.models import Miner, MinerModel, Settings
+from app.lib.util_hashrate import update_unit_and_value
 import re
 from datetime import timedelta
 import time
@@ -34,10 +33,15 @@ def miners():
     hash_rates = {}
     hw_error_rates = {}
     uptimes = {}
-    total_hash_rate_per_model = {"L3+": 0,
-                                 "S7": 0,
-                                 "S9": 0,
-                                 "D3": 0}
+    total_hash_rate_per_model = {"L3+": {"value": 0, "unit": "MH/s" },
+                                "S7": {"value": 0, "unit": "GH/s" },
+                                "S9": {"value": 0, "unit": "GH/s" },
+                                "D3": {"value": 0, "unit": "MH/s" },
+                                "T9": {"value": 0, "unit": "TH/s" },
+                                "A3": {"value": 0, "unit": "GH/s" },
+                                "L3": {"value": 0, "unit": "MH/s" },
+                                "R4": {"value": 0, "unit": "TH/s" },}
+                                
     errors = False
     miner_errors = {}
 
@@ -81,7 +85,7 @@ def miners():
                           sorted(miner_stats['STATS'][1].keys(), key=lambda x: str(x)) if
                           re.search("fan" + '[0-9]', fan) if miner_stats['STATS'][1][fan] != 0]
             # Get GH/S 5s
-            ghs5s = miner_stats['STATS'][1]['GHS 5s']
+            ghs5s = float(str(miner_stats['STATS'][1]['GHS 5s']))
             # Get HW Errors
             hw_error_rate = miner_stats['STATS'][1]['Device Hardware%']
             # Get uptime
@@ -94,10 +98,11 @@ def miners():
                                 })
             temperatures.update({miner.ip: temps})
             fans.update({miner.ip: {"speeds": fan_speeds}})
-            hash_rates.update({miner.ip: ghs5s})
+            value, unit = update_unit_and_value(ghs5s, total_hash_rate_per_model[miner.model.model]['unit'])
+            hash_rates.update({miner.ip: "{:3.2f} {}".format(value, unit)})
             hw_error_rates.update({miner.ip: hw_error_rate})
             uptimes.update({miner.ip: uptime})
-            total_hash_rate_per_model[miner.model.model] += float(str(ghs5s))
+            total_hash_rate_per_model[miner.model.model]["value"] += ghs5s
             active_miners.append(miner)
 
             # Flash error messages
@@ -117,10 +122,16 @@ def miners():
                 flash(error_message, "error")
                 errors = True
                 miner_errors.update({miner.ip: error_message})
-            if max(temps) >= 80:
-                error_message = "[WARNING] High temperatures on miner '{}'.".format(miner.ip)
+            if temps:
+                if max(temps) >= 80:
+                    error_message = "[WARNING] High temperatures on miner '{}'.".format(miner.ip)
+                    logger.warning(error_message)
+                    flash(error_message, "warning")
+            if not temps:
+                temperatures.update({miner.ip: 0})
+                error_message = "[ERROR] Could not retrieve temperatures from miner '{}'.".format(miner.ip)
                 logger.warning(error_message)
-                flash(error_message, "warning")
+                flash(error_message, "error")
 
     # Flash success/info message
     if not miners:
@@ -132,10 +143,19 @@ def miners():
         logger.info(error_message)
         flash(error_message, "info")
 
-    # flash("INFO !!! Check chips on your miner", "info")
-    # flash("SUCCESS !!! Miner added successfully", "success")
-    # flash("WARNING !!! Check temperatures on your miner", "warning")
-    # flash("ERROR !!!Check board(s) on your miner", "error")
+    # flash("[INFO] Check chips on your miner", "info")
+    # flash("[SUCCESS] Miner added successfully", "success")
+    # flash("[WARNING] Check temperatures on your miner", "warning")
+    # flash("[ERROR] Check board(s) on your miner", "error")
+
+    # Convert the total_hash_rate_per_model into a data structure that the template can
+    # consume.
+    total_hash_rate_per_model_temp = {}
+    for key in total_hash_rate_per_model:
+        value, unit = update_unit_and_value(total_hash_rate_per_model[key]["value"], total_hash_rate_per_model[key]["unit"])
+        if value > 0:
+            total_hash_rate_per_model_temp[key] = "{:3.2f} {}".format(value, unit)
+
 
     end = time.clock()
     loading_time = end - start
@@ -151,7 +171,7 @@ def miners():
                            hash_rates=hash_rates,
                            hw_error_rates=hw_error_rates,
                            uptimes=uptimes,
-                           total_hash_rate_per_model=total_hash_rate_per_model,
+                           total_hash_rate_per_model=total_hash_rate_per_model_temp,
                            loading_time=loading_time,
                            miner_errors=miner_errors,
                            )

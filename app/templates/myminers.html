@@ -3,98 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Antminer Monitor {{ version }}</title>
-    <style>
-        body {
-            width: 1024px;
-            margin: 0 auto;
-            font-family: 'Consolas';
-            font-size: 14px;
-        }
-
-        fieldset.top {
-            margin: 5px;
-            display: inline-block;
-            vertical-align: top;
-        }
-
-        .right {
-            float: right;
-        }
-
-        input[type="text"], textarea {
-            font-family: 'Consolas';
-            font-size: 12px;
-        }
-
-        table, th, td {
-            border: 1px solid black;
-            border-collapse: collapse;
-            text-align: center;
-        }
-
-        th, td {
-            padding: 5px;
-        }
-
-        tr:hover {
-            background-color: #f5f5f5
-        }
-
-        th {
-            background-color: #4CAF50;
-            color: white;
-        }
-
-        form {
-            display: table;
-        }
-
-        p {
-            display: table-row;
-        }
-
-        label {
-            display: table-cell;
-        }
-
-        input {
-            display: table-cell;
-            margin: 5px 0px 5px 0px;
-        }
-
-        .info, .success, .warning, .error {
-            margin: 10px 0px;
-            padding: 12px;
-            border-radius: .5em;
-            # add rounder corners
-            border: 1px solid;
-            # add border
-            box-shadow: 1px 1px 3px #888;
-            # add shadow
-        }
-
-        .info {
-            color: #00529B;
-            background-color: #BDE5F8;
-        }
-
-        .success {
-            color: #4F8A10;
-            background-color: #DFF2BF;
-        }
-
-        .warning {
-            color: #9F6000;
-            background-color: #FEEFB3;
-        }
-
-        .error {
-            color: #D8000C;
-            background-color: #FFBABA;
-        }
-
-    </style>
-    <script src="/static/coinwidget/coin.js"></script>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/main.css')}}">
 </head>
 <body>
 <h2>Antminer Monitor {{ version }}</h2>
@@ -103,43 +12,53 @@
 <b id="countdown"></b>
 </fieldset>
 
-<fieldset class="top" name="add" style="width: 300px;">
-    <legend>Add Miner</legend>
-    <form action="{{ url_for('add_miner') }}" method="POST">
-        <p>
-            <label for="ip">IP Address: </label>
-            <input required type="text" name="ip">
-        </p>
-        <p>
-            <label for="model_id">Model: </label>
-            <select required name="model_id">
-                <option disabled selected value> -- select an option --</option>
-                {%- for model in models|sort(attribute="model") %}
-                    <option value="{{ model.id }}">{{ model.model }} - {{ model.description }}</option>
+<div class="container">
+    <div>
+      <fieldset name="add">
+          <legend>Add Miner</legend>
+          <form action="{{ url_for('add_miner') }}" method="POST">
+              <div class="addminer_container">
+                  <div>
+                      <label for="ip">IP Address: </label>
+                  </div>
+                  <div>
+                      <input required type="text" name="ip">
+                  </div>
+                  <div>
+                      <label for="model_id">Model: </label>
+                  </div>
+                  <div>
+                      <select required name="model_id">
+                          <option disabled selected value> -- select an option --</option>
+                          {%- for model in models|sort(attribute="model") %}
+                              <option value="{{ model.id }}">{{ model.model }} - {{ model.description }}</option>
+                          {%- endfor %}
+                      </select>
+                  </div>
+                  <div>
+                      <label for="remarks">Remarks: </label>
+                  </div>
+                  <div>
+                      <input type="text" name="remarks">
+                  </div>
+                  <p><input type="submit" value="Add model"></p>
+              </div>
+          </form>
+      </fieldset>
+    </div>
+    <div></div>
+    <div>
+        <fieldset name="total_hashrate" style="height:130px">
+            <legend>Total hashrate per model (5s)</legend>
+            <ul>
+                {%- for model in total_hash_rate_per_model|sort %}
+                    <li><u>{{ model }}:</u> <strong>{{ total_hash_rate_per_model[model] }}</strong>
+                    </li>
                 {%- endfor %}
-            </select>
-        </p>
-        <p>
-            <label for="remarks">Remarks: </label>
-            <input type="text" name="remarks">
-        </p>
-        <p><input type="submit" value="Add model"></p>
-    </form>
-</fieldset>
-
-<fieldset class="right top" name="total_hashrate" style="width: 300px; height:130px">
-    <legend>Total hashrate per model (5s)</legend>
-    <ul>
-        {%- set mapping = {'L3+': 'MH/s', 'S7': 'GH/s', 'S9': 'GH/s', 'D3': 'MH/s'} %}
-        {%- for model in total_hash_rate_per_model|sort %}
-            {%- if total_hash_rate_per_model[model] >0 %}
-            <li><u>{{ model }}:</u> <strong>{{ total_hash_rate_per_model[model] }}</strong>
-                {{ mapping.get(model) }}
-            </li>
-            {%- endif %}
-        {%- endfor %}
-    </ul>
-</fieldset>
+            </ul>
+        </fieldset>
+    </div>
+</div>
 
 <br>
 {%- with messages = get_flashed_messages(with_categories=true) %}
@@ -210,7 +129,7 @@
                 <td>{{ miner_chips[active_miner.ip]['status']['-'] }}</td>
                 <td>{{ temperatures[active_miner.ip] }}</td>
                 <td>{{ fans[active_miner.ip].speeds }}</td>
-                <td>{{ hash_rates[active_miner.ip] }} {{ mapping.get(active_miner.model.model) }}</td>
+                <td>{{ hash_rates[active_miner.ip] }}</td>
                 <td>{{ hw_error_rates[active_miner.ip] }}</td>
                 <td>{{ uptimes[active_miner.ip] }}</td>
                 <td title="{%- if active_miner.ip in miner_errors %}{{ miner_errors[active_miner.ip] }}{%- endif %}">
@@ -234,61 +153,9 @@
         data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_green_007200.png"></a>
 <i>Generated in {{ loading_time }} seconds. Source code <a target="_blank"
                                                            href="https://github.com/anselal/antminer-monitor">here</a>.
-    <script>
-        CoinWidgetCom.go({
-
-            /* make sure you update the wallet_address or you will not get your donations */
-            wallet_address: "1HYCBovF6mqqKMyG4m2DQxXpdKmogK4Wuw"
-
-            , currency: "bitcoin"
-            , counter: "hide"
-            , alignment: "br"
-            , qrcode: true
-            , auto_show: false
-            , lbl_button: "Donate"
-            , lbl_address: "Donate Bitcoin to this Address:"
-            , lbl_count: "donations"
-            , lbl_amount: "BTC"
-        });
-        CoinWidgetCom.go({
-
-            /* make sure you update the wallet_address or you will not get your donations */
-            wallet_address: "LLrjq6nRokS74yPMspitHkXv4nLtEyebNW"
-
-            , currency: "litecoin"
-            , counter: "hide"
-            , alignment: "ac"
-            , qrcode: true
-            , auto_show: false
-            , lbl_button: "Donate"
-            , lbl_address: "Donate Litecoin to this Address:"
-            , lbl_count: "donations"
-            , lbl_amount: "LTC"
-        });
-        CoinWidgetCom.go({
-
-            /* make sure you update the wallet_address or you will not get your donations */
-            wallet_address: "XuEnZtsCmWcDwKVe82wQddsfwUifXyeRoQ"
-
-            , currency: "dash"
-            , counter: "hide"
-            , alignment: "bl"
-            , qrcode: true
-            , auto_show: false
-            , lbl_button: "Donate"
-            , lbl_address: "Donate Dash to this Address:"
-            , lbl_count: "donations"
-            , lbl_amount: "DASH"
-        });
-        (function countdown(remaining) {
-            if(remaining === 0)
-                location.reload(true);
-            else {
-                document.getElementById('countdown').innerHTML = 'Refresh in: ' + remaining + ' sec';
-                setTimeout(function(){ countdown(remaining - 1); }, 1000);
-            }
-        })(120);
-    </script>
+    <script src="{{ url_for('static', filename='scripts/vendor/coin.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/donate.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/main.js') }}"></script>
     <!-- https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=dash:XiXwTjyN8DAsQaRh2pcFVyVSbXvk6Ph6ro?amount=0.001-->
 </body>
 </html>
